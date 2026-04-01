@@ -61,7 +61,7 @@ class TestModeManager: ObservableObject {
         switch scenario {
         case .upcomingAlert:
             let event = makeEvent(
-                title: "Созвон с командой",
+                title: Str.demoEventTeamCall,
                 startOffset: 10 * 60,
                 duration: 30 * 60,
                 alarmOffset: -15 * 60
@@ -72,7 +72,7 @@ class TestModeManager: ObservableObject {
 
         case .inProgress:
             let event = makeEvent(
-                title: "Синк с дизайнерами",
+                title: Str.demoEventDesignSync,
                 startOffset: -10 * 60,
                 duration: 45 * 60
             )
@@ -81,23 +81,23 @@ class TestModeManager: ObservableObject {
             state.activeReminders = []
 
         case .overlapping:
-            let e1 = makeEvent(title: "Daily standup", startOffset: -5 * 60, duration: 30 * 60)
-            let e2 = makeEvent(title: "1-on-1 с менеджером", startOffset: -2 * 60, duration: 60 * 60)
+            let e1 = makeEvent(title: Str.demoEventDailyStandup, startOffset: -5 * 60, duration: 30 * 60)
+            let e2 = makeEvent(title: Str.demoEventOneOnOne, startOffset: -2 * 60, duration: 60 * 60)
             state.activeEventAlerts = []
             state.currentEvents = [e1, e2]
             state.activeReminders = []
 
         case .singleReminder:
-            let r = FakeReminder(title: "Позвонить в банк", overdueMinutes: 5)
+            let r = FakeReminder(title: Str.demoReminderCallBank, overdueMinutes: 5)
             fakeReminders = [r]
             state.activeEventAlerts = []
             state.currentEvents = []
             state.activeReminders = r.asEKReminders(store: store)
 
         case .multiReminder:
-            let r1 = FakeReminder(title: "Оплатить счёт", overdueMinutes: 20)
-            let r2 = FakeReminder(title: "Купить продукты", overdueMinutes: 5)
-            let r3 = FakeReminder(title: "Написать отчёт", overdueMinutes: 0)
+            let r1 = FakeReminder(title: Str.demoReminderPayBill, overdueMinutes: 20)
+            let r2 = FakeReminder(title: Str.demoReminderBuyGroceries, overdueMinutes: 5)
+            let r3 = FakeReminder(title: Str.demoReminderWriteReport, overdueMinutes: 0)
             fakeReminders = [r1, r2, r3]
             state.activeEventAlerts = []
             state.currentEvents = []
@@ -105,12 +105,12 @@ class TestModeManager: ObservableObject {
 
         case .everything:
             let event = makeEvent(
-                title: "Встреча с клиентом",
+                title: Str.demoEventClientMeeting,
                 startOffset: 7 * 60,
                 duration: 60 * 60,
                 alarmOffset: -10 * 60
             )
-            let r = FakeReminder(title: "Подготовить презентацию", overdueMinutes: 10)
+            let r = FakeReminder(title: Str.demoReminderPreparePresentation, overdueMinutes: 10)
             fakeReminders = [r]
             state.activeEventAlerts = [event]
             state.currentEvents = []

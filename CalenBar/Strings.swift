@@ -232,6 +232,20 @@ enum Str {
     static let testScenarioMultiRem   = pick(en: "Three reminders",              ru: "Три напоминания",                 zh: "三个提醒")
     static let testScenarioEverything = pick(en: "Event + reminder",             ru: "Событие + напоминание",           zh: "事件 + 提醒")
 
+    // MARK: - Demo event/reminder titles for onboarding
+
+    static let demoEventTeamCall     = pick(en: "Team Call",                     ru: "Созвон с командой",               zh: "团队会议")
+    static let demoEventDesignSync   = pick(en: "Design Sync",                   ru: "Синк с дизайнерами",              zh: "设计同步会议")
+    static let demoEventDailyStandup = pick(en: "Daily Standup",                 ru: "Daily standup",                   zh: "每日站会")
+    static let demoEventOneOnOne     = pick(en: "1-on-1 with Manager",           ru: "1-on-1 с менеджером",             zh: "1对1 管理层会议")
+    static let demoEventClientMeeting = pick(en: "Client Meeting",               ru: "Встреча с клиентом",              zh: "客户会议")
+    
+    static let demoReminderCallBank  = pick(en: "Call the Bank",                 ru: "Позвонить в банк",                zh: "给银行打电话")
+    static let demoReminderPayBill   = pick(en: "Pay the Bill",                  ru: "Оплатить счёт",                   zh: "支付账单")
+    static let demoReminderBuyGroceries = pick(en: "Buy Groceries",              ru: "Купить продукты",                 zh: "购买杂货")
+    static let demoReminderWriteReport = pick(en: "Write Report",                ru: "Написать отчёт",                  zh: "编写报告")
+    static let demoReminderPreparePresentation = pick(en: "Prepare Presentation", ru: "Подготовить презентацию",       zh: "准备演示文稿")
+
     // MARK: - Onboarding welcome / new steps
 
     static let welcomeTitle    = pick(en: "Welcome to CalenBar",     ru: "Добро пожаловать в CalenBar", zh: "欢迎使用 CalenBar")
