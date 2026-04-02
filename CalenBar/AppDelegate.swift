@@ -79,11 +79,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let view = OnboardingView {
             SettingsManager.shared.hasCompletedOnboarding = true
             TestModeManager.shared.clearState()
-            // Закрываем окно и возвращаем в accessory режим
             Task { @MainActor in
                 self.onboardingWindow?.close()
                 self.onboardingWindow = nil
-                // Возвращаемся в accessory режим чтобы не было активного окна
                 NSApp.setActivationPolicy(.accessory)
             }
         }
@@ -108,7 +106,7 @@ extension AppDelegate: NSWindowDelegate {
         let w = notification.object as? NSWindow
         guard w === settingsWindow || w === onboardingWindow else { return }
         
-        // Возвращаем в accessory режим только если нет других открытых окон
+        // Switch back to accessory only when no other managed windows remain visible
         Task { @MainActor in
             let hasVisibleWindows = NSApp.windows.contains { window in
                 window.isVisible &&
@@ -126,14 +124,10 @@ extension AppDelegate: NSWindowDelegate {
 
 private extension AppDelegate {
     func bringWindowToFront(_ window: NSWindow) {
-        // Сначала активируем приложение
+        // Activation policy must be set before makeKeyAndOrderFront to ensure the window appears in front
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        
-        // Затем показываем окно — порядок важен для плавности
         window.makeKeyAndOrderFront(nil)
-        
-        // Дополнительно убеждаемся, что окно на переднем плане
         window.orderFrontRegardless()
     }
 }

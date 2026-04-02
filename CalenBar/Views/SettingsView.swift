@@ -26,6 +26,10 @@ struct SettingsView: View {
             SnoozeTab()
                 .tabItem { Label(Str.tabSnooze, systemImage: "clock.arrow.circlepath") }
                 .tag("snooze")
+
+            AboutTab()
+                .tabItem { Label(Str.tabAbout, systemImage: "info.circle") }
+                .tag("about")
         }
         .padding(20)
         .frame(width: 500, height: 500)
@@ -462,6 +466,153 @@ private struct SnoozeTab: View {
             }
         }
         .padding()
+    }
+}
+
+// MARK: - About Tab
+
+private struct AboutTab: View {
+    @ObservedObject private var bugReportManager = BugReportManager.shared
+    @State private var showBugReportSheet = false
+    
+    private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    private let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // App Icon & Title
+            VStack(spacing: 12) {
+                if let icon = NSImage(named: "AppIcon") {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .frame(width: 80, height: 80)
+                        .cornerRadius(16)
+                }
+                
+                Text("CalendarBar")
+                    .font(.title)
+                    .fontWeight(.semibold)
+                
+                Text("v\(version) (\(build))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Description
+            Text(Str.aboutDescription)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
+            
+            Spacer()
+            
+            // Buttons
+            VStack(spacing: 12) {
+                Button(action: { showBugReportSheet = true }) {
+                    Label(Str.reportBug, systemImage: "ladybug")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+                
+                Button(action: openGitHub) {
+                    Label(Str.viewOnGitHub, systemImage: "link")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+            }
+            .padding(.horizontal, 60)
+            .padding(.bottom, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(isPresented: $showBugReportSheet) {
+            BugReportSheet(isPresented: $showBugReportSheet)
+        }
+    }
+    
+    private func openGitHub() {
+        if let url = URL(string: "https://github.com/just-mn/calenbar") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+}
+
+// MARK: - Bug Report Sheet
+
+private struct BugReportSheet: View {
+    @Binding var isPresented: Bool
+    @ObservedObject private var manager = BugReportManager.shared
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Header
+            HStack {
+                Image(systemName: "ladybug.fill")
+                    .font(.title)
+                    .foregroundColor(.red)
+                Text(Str.bugReportTitle)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+            }
+            .padding(.top, 20)
+            
+            // Description
+            Text(Str.bugReportDesc)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Spacer()
+            
+            // Status / Error
+            if manager.isGenerating {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text(Str.generating)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 40)
+            } else if let error = manager.lastError {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.largeTitle)
+                        .foregroundColor(.orange)
+                    Text(Str.bugReportError)
+                        .font(.headline)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 20)
+            }
+            
+            Spacer()
+            
+            // Buttons
+            HStack(spacing: 12) {
+                Button(Str.cancel) {
+                    isPresented = false
+                }
+                .keyboardShortcut(.cancelAction)
+                .disabled(manager.isGenerating)
+                
+                Button(Str.generate) {
+                    Task {
+                        await manager.createBugReport()
+                        // Close sheet after opening browser
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                        isPresented = false
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(manager.isGenerating)
+            }
+            .padding(.bottom, 20)
+        }
+        .frame(width: 450, height: 350)
     }
 }
 

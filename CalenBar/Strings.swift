@@ -310,4 +310,27 @@ enum Str {
     static let colorGreen  = pick(en: "Green",        ru: "Зелёный",     zh: "绿色")
     static let colorPink   = pick(en: "Pink",         ru: "Розовый",     zh: "粉色")
     static let colorCustom = pick(en: "Custom",       ru: "Свой цвет",   zh: "自定义")
+
+    // MARK: - Bug Report / About
+
+    static let tabAbout         = pick(en: "About",             ru: "О программе",        zh: "关于")
+    static let aboutDescription = pick(en: "CalendarBar keeps your Calendar events and Reminders always visible in the macOS menu bar.",
+                                       ru: "CalendarBar держит события из Календаря и Напоминания всегда на виду в строке меню macOS.",
+                                       zh: "CalendarBar 在 macOS 菜单栏中持续显示您的日历事件和提醒。")
+    static let reportBug        = pick(en: "Report a Bug",      ru: "Сообщить об ошибке", zh: "报告错误")
+    static let viewOnGitHub     = pick(en: "View on GitHub",    ru: "Открыть на GitHub",  zh: "在 GitHub 上查看")
+    static let bugReportTitle   = pick(en: "Report a Bug",      ru: "Отправить баг-репорт", zh: "报告错误")
+    static let bugReportDesc    = pick(en: "This will collect system information and recent logs (without sensitive data like event titles) and open GitHub to create an issue.",
+                                       ru: "Будет собрана информация о системе и последние логи (без чувствительных данных вроде названий событий), затем откроется GitHub для создания issue.",
+                                       zh: "这将收集系统信息和最近的日志（不包含事件标题等敏感数据），并打开 GitHub 创建问题报告。")
+    static let generating       = pick(en: "Generating…",       ru: "Создание…",          zh: "生成中…")
+    static let bugReportSuccess = pick(en: "Bug report generated. Opening GitHub…",
+                                       ru: "Баг-репорт создан. Открываю GitHub…",
+                                       zh: "错误报告已生成。正在打开 GitHub…")
+    static let bugReportError   = pick(en: "Error generating report",
+                                       ru: "Ошибка при создании репорта",
+                                       zh: "生成报告时出错")
+    static let close            = pick(en: "Close",             ru: "Закрыть",            zh: "关闭")
+    static let cancel           = pick(en: "Cancel",            ru: "Отмена",             zh: "取消")
+    static let generate         = pick(en: "Generate Report",   ru: "Создать репорт",     zh: "生成报告")
 }

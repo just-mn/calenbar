@@ -106,6 +106,14 @@ class AlertStateManager: ObservableObject {
 
         activeEventAlerts = newAlerts
         currentEvents = nowEvents
+
+        // Prune sounded-set: keep only keys for events still in the active alerts window
+        let activeKeys = Set(newAlerts.compactMap { event -> [String]? in
+            guard let alarms = event.alarms, let start = event.startDate else { return nil }
+            return alarms.compactMap { alarmTriggerDate($0, eventStart: start).map { dismissKey(event: event, alarmDate: $0) } }
+        }.flatMap { $0 })
+        soundedEventAlerts = soundedEventAlerts.intersection(activeKeys)
+
         Log.state.debug("Tick complete — \(newAlerts.count) alerts, \(nowEvents.count) in-progress")
 
         // Reminders

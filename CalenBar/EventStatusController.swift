@@ -15,7 +15,7 @@ class EventMenuBarModel: ObservableObject {
     @Published var flashOn    = false
     @Published var flashTextColor: Color = .orange
     @Published var flashBgColor:   Color = .orange
-    /// Увеличивается при каждой смене события — триггер для плавной анимации перехода.
+    /// Incremented on each event cycle — triggers the cross-fade transition animation.
     @Published var cycleKey   = 0
 }
 

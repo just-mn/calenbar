@@ -40,7 +40,7 @@ struct OnboardingView: View {
                             let result = await cm.requestCalendarAccess()
                             await MainActor.run {
                                 calGranted = result
-                                // Повторно активируем окно после системного диалога
+                                // Re-activate the window after the system permission dialog dismisses
                                 NSApp.activate(ignoringOtherApps: true)
                             }
                         }
@@ -56,7 +56,7 @@ struct OnboardingView: View {
                             let result = await cm.requestReminderAccess()
                             await MainActor.run {
                                 remGranted = result
-                                // Повторно активируем окно после системного диалога
+                                // Re-activate the window after the system permission dialog dismisses
                                 NSApp.activate(ignoringOtherApps: true)
                             }
                         }
@@ -158,10 +158,8 @@ private struct PermissionStep: View {
                     Button(action: {
                         isRequesting = true
                         onRequest()
-                        // Даём время на обработку запроса
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                             isRequesting = false
-                            // Если после запроса не получили доступ, показываем подсказку
                             if !granted {
                                 showDeniedMessage = true
                             }

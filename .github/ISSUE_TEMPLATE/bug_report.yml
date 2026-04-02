@@ -1,0 +1,113 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! 
+        
+        💡 **Tip:** You can generate this report automatically from the app:
+        **Settings** → **About** → **Report a Bug**
+        
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of what the bug is
+      placeholder: What went wrong?
+    validations:
+      required: true
+      
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Open the app
+        2. Click on...
+        3. See error
+    validations:
+      required: true
+      
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: I expected...
+    validations:
+      required: true
+      
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Instead, this happened...
+    validations:
+      required: true
+      
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS Version
+      description: What version of macOS are you running?
+      placeholder: "e.g., 14.6.1"
+    validations:
+      required: true
+      
+  - type: input
+    id: app-version
+    attributes:
+      label: CalendarBar Version
+      description: What version of CalendarBar? (Found in Settings → About)
+      placeholder: "e.g., 1.0 (build 42)"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: calendar-access
+    attributes:
+      label: Calendar Access
+      description: Has the app been granted access to Calendar?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: reminders-access
+    attributes:
+      label: Reminders Access
+      description: Has the app been granted access to Reminders?
+      options:
+        - "Yes"
+        - "No"
+        - "Not sure"
+    validations:
+      required: true
+      
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (Optional)
+      description: |
+        If you generated this report from the app, logs are automatically included below.
+        Otherwise, you can collect logs manually:
+        ```bash
+        log show --predicate 'subsystem == "dev.just-mn.calenbar"' --last 10m --info --debug
+        ```
+      placeholder: Paste logs here...
+      render: shell
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that might be helpful
+      placeholder: Screenshots, screen recordings, etc.

@@ -4,8 +4,8 @@ import os
 
 // MARK: - Generic menu bar container view
 
-/// Хостит любой SwiftUI-View внутри NSView для статус-бара.
-/// Обрабатывает клик для отображения меню и динамическое изменение ширины.
+/// Hosts any SwiftUI View inside an NSView for the status bar.
+/// Handles click-to-show-menu and dynamic width resizing.
 class MenuBarContainerView: NSView {
     private let hosting: NSHostingView<AnyView>
     var menuProvider: (() -> NSMenu)?
@@ -36,15 +36,15 @@ class MenuBarContainerView: NSView {
     }
 }
 
-// MARK: - Общий контроллер мигания
+// MARK: - Flash controller
 
-/// Управляет таймером мигания. Используется в EventStatusController и ReminderStatusController.
+/// Drives the flash timer. Used by EventStatusController and ReminderStatusController.
 @MainActor
 final class FlashController {
     private var flashTimer: Timer?
     private(set) var isFlashing = false
 
-    /// Вызывается на каждом такте: true = подсветка включена, false = выключена.
+    /// Called on every flash tick: `true` = highlight on, `false` = off.
     var onFlashChange: ((Bool) -> Void)?
 
     deinit {
@@ -83,10 +83,10 @@ final class FlashController {
     }
 }
 
-// MARK: - Общие пункты меню
+// MARK: - Common menu items
 
-/// Добавляет стандартные пункты «Настройки…» и «Выйти» в конец меню.
-/// Настройки направляются напрямую в AppDelegate, чтобы контроллерам не нужен @objc-селектор.
+/// Appends standard "Settings…" and "Quit" items to the end of a menu.
+/// Settings are routed directly to AppDelegate so individual controllers don't need an @objc selector.
 @MainActor
 func appendCommonMenuItems(to menu: NSMenu, showQuit: Bool) {
     let s = NSMenuItem(title: Str.settingsMenuItem, action: #selector(AppDelegate.showSettings), keyEquivalent: "")

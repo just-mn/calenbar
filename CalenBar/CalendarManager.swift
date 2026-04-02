@@ -139,7 +139,11 @@ class CalendarManager: ObservableObject {
     func complete(_ reminder: EKReminder) throws {
         guard reminder.calendar != nil else {
             Log.calendar.warning("Cannot complete reminder — no calendar assigned")
-            return
+            throw NSError(
+                domain: "CalendarManager",
+                code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "Cannot complete reminder: no calendar assigned"]
+            )
         }
         reminder.isCompleted = true
         try store.save(reminder, commit: true)
