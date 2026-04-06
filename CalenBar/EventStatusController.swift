@@ -114,7 +114,7 @@ class EventStatusController {
         let all = merged(alerts: alerts, current: alertState.currentEvents)
         if all.isEmpty { hide(); return }
 
-        Log.eventUI.debug("State change — \(alerts.count) alert(s), \(alertState.currentEvents.count) in-progress")
+        Log.eventUI.debug("State change — \(alerts.count) alert(s), \(self.alertState.currentEvents.count) in-progress")
         ensureStatusItem()
 
         let incomingIDs = Set(alerts.map { eventID($0) })
@@ -159,14 +159,6 @@ class EventStatusController {
     private func merged(alerts: [EKEvent], current: [EKEvent]) -> [EKEvent] {
         let alertIDs = Set(alerts.map { eventID($0) })
         return alerts + current.filter { !alertIDs.contains(eventID($0)) }
-    }
-
-    /// Deduplicate by eventID (activeEventAlerts shouldn't have duplicates,
-    /// but guards against edge cases like test mode injecting the same object twice).
-    private func deduplicated(_ alerts: [EKEvent]) -> [EKEvent] {
-        var seen = Set<String>(); var result: [EKEvent] = []
-        for e in alerts where seen.insert(eventID(e)).inserted { result.append(e) }
-        return result
     }
 
     // MARK: - Status item lifecycle

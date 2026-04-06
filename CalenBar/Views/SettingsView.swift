@@ -1,12 +1,22 @@
 import SwiftUI
+import Combine
 import EventKit
 import ServiceManagement
+import UniformTypeIdentifiers
+
+// MARK: - Shared tab navigation
+
+@MainActor
+class SettingsNavigation: ObservableObject {
+    static let shared = SettingsNavigation()
+    @Published var selectedTab = "general"
+}
 
 struct SettingsView: View {
-    @State private var selectedTab = "general"
+    @ObservedObject private var nav = SettingsNavigation.shared
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $nav.selectedTab) {
             GeneralTab()
                 .tabItem { Label(Str.tabGeneral, systemImage: "gear") }
                 .tag("general")
@@ -60,7 +70,7 @@ private struct GeneralTab: View {
                     HStack(spacing: 10) {
                         Text(Str.flashSpeed)
                         Slider(value: $settings.flashInterval, in: 0.15...1.0, step: 0.05)
-                        Text(flashSpeedLabel(settings.flashInterval))
+                        Text(Str.flashSpeedLabel(settings.flashInterval))
                             .foregroundColor(.secondary).frame(width: 65, alignment: .leading)
                     }
 
@@ -71,11 +81,27 @@ private struct GeneralTab: View {
             Section(Str.sectionSound) {
                 Toggle(Str.soundEnabled, isOn: $settings.soundEnabled)
                 if settings.soundEnabled {
-                    HStack {
-                        Picker(Str.soundLabel, selection: $settings.soundName) {
-                            ForEach(SettingsManager.availableSounds, id: \.self) { Text($0).tag($0) }
+                    if !settings.useCustomSound {
+                        HStack {
+                            Picker(Str.soundLabel, selection: $settings.soundName) {
+                                ForEach(SettingsManager.availableSounds, id: \.self) { Text($0).tag($0) }
+                            }
+                            Button(Str.soundTest) { settings.playCurrentSound() }
                         }
-                        Button(Str.soundTest) { settings.playCurrentSound() }
+                    }
+
+                    Toggle(Str.customSound, isOn: $settings.useCustomSound)
+                    if settings.useCustomSound {
+                        HStack {
+                            Image(systemName: "music.note").foregroundColor(.accentColor)
+                            Text(settings.customSoundName.isEmpty ? Str.noFileSelected : settings.customSoundName)
+                                .foregroundColor(.secondary).lineLimit(1)
+                            Spacer()
+                            Button(Str.chooseFile) { settings.pickCustomSound() }
+                            if !settings.customSoundName.isEmpty {
+                                Button(Str.soundTest) { settings.playCurrentSound() }
+                            }
+                        }
                     }
                 }
             }
@@ -90,14 +116,6 @@ private struct GeneralTab: View {
             }
         }
         .formStyle(.grouped)
-    }
-
-    private func flashSpeedLabel(_ v: Double) -> String {
-        switch v {
-        case ..<0.25: return Str.flashSpeedFast
-        case ..<0.55: return Str.flashSpeedMedium
-        default:      return Str.flashSpeedSlow
-        }
     }
 }
 
@@ -117,17 +135,8 @@ private struct AppearanceTab: View {
                 .pickerStyle(.radioGroup)
                 .labelsHidden()
 
-                switch settings.displayMode {
-                case .automatic:
-                    Text(Str.displayAutoNote)
-                        .font(.caption).foregroundColor(.secondary)
-                case .informative:
-                    Text(Str.displayInfoNote)
-                        .font(.caption).foregroundColor(.secondary)
-                case .compact:
-                    Text(Str.displayCompactNote)
-                        .font(.caption).foregroundColor(.secondary)
-                }
+                Text(settings.displayMode.note)
+                    .font(.caption).foregroundColor(.secondary)
             }
 
             Section(Str.colorUpcoming) {
@@ -341,39 +350,14 @@ private struct CalendarsTab: View {
     @State private var calendars: [EKCalendar] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Str.calendarsTrack)
-                .font(.headline)
-            Text(Str.calendarsHint)
-                .foregroundColor(.secondary).font(.caption)
-
-            if calendars.isEmpty {
-                emptyView(message: Str.noCalendarsMsg)
-            } else {
-                calendarList
-            }
-        }
-        .padding()
+        CalendarListPicker(
+            title: Str.calendarsTrack,
+            hint: Str.calendarsHint,
+            emptyMessage: Str.noCalendarsMsg,
+            items: calendars,
+            selection: $settings.selectedCalendarIDs
+        )
         .onAppear { calendars = CalendarManager.shared.allCalendars() }
-    }
-
-    private var calendarList: some View {
-        List(calendars, id: \.calendarIdentifier) { cal in
-            let id = cal.calendarIdentifier
-            let on = settings.selectedCalendarIDs.contains(id)
-            HStack {
-                Image(systemName: on ? "checkmark.square.fill" : "square")
-                    .foregroundColor(on ? .accentColor : .secondary)
-                Circle().fill(Color(cgColor: cal.cgColor)).frame(width: 10, height: 10)
-                Text(cal.title)
-                Spacer()
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if on { settings.selectedCalendarIDs.remove(id) }
-                else  { settings.selectedCalendarIDs.insert(id) }
-            }
-        }
     }
 }
 
@@ -384,35 +368,53 @@ private struct RemindersTab: View {
     @State private var lists: [EKCalendar] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(Str.remindersTrack)
-                .font(.headline)
-            Text(Str.remindersHint)
-                .foregroundColor(.secondary).font(.caption)
+        CalendarListPicker(
+            title: Str.remindersTrack,
+            hint: Str.remindersHint,
+            emptyMessage: Str.noRemindersMsg,
+            items: lists,
+            selection: $settings.selectedReminderListIDs
+        )
+        .onAppear { lists = CalendarManager.shared.allReminderLists() }
+    }
+}
 
-            if lists.isEmpty {
-                emptyView(message: Str.noRemindersMsg)
+// MARK: - Shared calendar/reminder list picker
+
+private struct CalendarListPicker: View {
+    let title: String
+    let hint: String
+    let emptyMessage: String
+    let items: [EKCalendar]
+    @Binding var selection: Set<String>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.headline)
+            Text(hint).foregroundColor(.secondary).font(.caption)
+
+            if items.isEmpty {
+                emptyView(message: emptyMessage)
             } else {
-                List(lists, id: \.calendarIdentifier) { list in
-                    let id = list.calendarIdentifier
-                    let on = settings.selectedReminderListIDs.contains(id)
+                List(items, id: \.calendarIdentifier) { item in
+                    let id = item.calendarIdentifier
+                    let on = selection.contains(id)
                     HStack {
                         Image(systemName: on ? "checkmark.square.fill" : "square")
                             .foregroundColor(on ? .accentColor : .secondary)
-                        Circle().fill(Color(cgColor: list.cgColor)).frame(width: 10, height: 10)
-                        Text(list.title)
+                        Circle().fill(Color(cgColor: item.cgColor)).frame(width: 10, height: 10)
+                        Text(item.title)
                         Spacer()
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        if on { settings.selectedReminderListIDs.remove(id) }
-                        else  { settings.selectedReminderListIDs.insert(id) }
+                        if on { selection.remove(id) }
+                        else  { selection.insert(id) }
                     }
                 }
             }
         }
         .padding()
-        .onAppear { lists = CalendarManager.shared.allReminderLists() }
     }
 }
 
@@ -474,23 +476,23 @@ private struct SnoozeTab: View {
 private struct AboutTab: View {
     @ObservedObject private var bugReportManager = BugReportManager.shared
     @State private var showBugReportSheet = false
-    
+
     private let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     private let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    
+
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             // App Icon & Title
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 if let icon = NSImage(named: "AppIcon") {
                     Image(nsImage: icon)
                         .resizable()
-                        .frame(width: 80, height: 80)
-                        .cornerRadius(16)
+                        .frame(width: 64, height: 64)
+                        .cornerRadius(14)
                 }
-                
+
                 Text("CalenBar")
-                    .font(.title)
+                    .font(.title2)
                     .fontWeight(.semibold)
 
                 Text("v\(version) (\(build))")
@@ -505,45 +507,44 @@ private struct AboutTab: View {
                 .buttonStyle(.plain)
                 .underline()
             }
-            
+
             // Description
             Text(Str.aboutDescription)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
-            
+
             Spacer()
-            
+
             // Buttons
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 Button(action: { showBugReportSheet = true }) {
                     Label(Str.reportBug, systemImage: "ladybug")
                         .frame(maxWidth: .infinity)
                 }
                 .controlSize(.large)
-                
-                Button(action: openWebsite) {
-                    Label(Str.visitWebsite, systemImage: "globe")
-                        .frame(maxWidth: .infinity)
-                }
-                .controlSize(.large)
 
-                Button(action: openGitHub) {
-                    Label(Str.viewOnGitHub, systemImage: "link")
-                        .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    Button(action: openWebsite) {
+                        Label(Str.visitWebsite, systemImage: "globe")
+                            .frame(maxWidth: .infinity)
+                    }
+                    Button(action: openGitHub) {
+                        Label(Str.viewOnGitHub, systemImage: "link")
+                            .frame(maxWidth: .infinity)
+                    }
                 }
-                .controlSize(.large)
             }
-            .padding(.horizontal, 60)
-            .padding(.bottom, 20)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .sheet(isPresented: $showBugReportSheet) {
             BugReportSheet(isPresented: $showBugReportSheet)
         }
     }
-    
+
     private func openWebsite() {
         if let url = URL(string: "https://just-mn.dev") {
             NSWorkspace.shared.open(url)
@@ -562,6 +563,8 @@ private struct AboutTab: View {
 private struct BugReportSheet: View {
     @Binding var isPresented: Bool
     @ObservedObject private var manager = BugReportManager.shared
+    @State private var logStartDate = Date().addingTimeInterval(-5 * 60)
+    @State private var logEndDate = Date()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -590,6 +593,14 @@ private struct BugReportSheet: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
+            VStack(spacing: 8) {
+                DatePicker(Str.logsFrom, selection: $logStartDate)
+                    .datePickerStyle(.field)
+                DatePicker(Str.logsTo, selection: $logEndDate)
+                    .datePickerStyle(.field)
+            }
+            .padding(.horizontal, 40)
+
             Spacer()
 
             if manager.isGenerating {
@@ -615,7 +626,7 @@ private struct BugReportSheet: View {
                     .disabled(manager.isGenerating)
 
                 Button(Str.generate) {
-                    Task { await manager.createBugReport() }
+                    Task { await manager.createBugReport(from: logStartDate, to: logEndDate) }
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(manager.isGenerating)

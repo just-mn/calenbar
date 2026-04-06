@@ -17,57 +17,37 @@ class CalendarManager: ObservableObject {
     // MARK: - Access
 
     func requestCalendarAccess() async -> Bool {
-        let currentStatus = EKEventStore.authorizationStatus(for: .event)
-        Log.calendar.info("Calendar auth status: \(String(describing: currentStatus))")
-
-        if currentStatus == .fullAccess {
-            calendarAccessGranted = true
-            Log.calendar.debug("Calendar access already granted")
-            return true
-        }
-
-        if currentStatus == .denied {
-            calendarAccessGranted = false
-            Log.calendar.warning("Calendar access denied — user must enable in System Settings")
-            return false
-        }
-
-        do {
-            let granted = try await store.requestFullAccessToEvents()
-            calendarAccessGranted = granted
-            Log.calendar.info("Calendar access request result: \(granted)")
-            return granted
-        } catch {
-            Log.calendar.error("Calendar access request failed: \(error.localizedDescription)")
-            calendarAccessGranted = false
-            return false
-        }
+        let granted = await requestAccess(for: .event) { try await self.store.requestFullAccessToEvents() }
+        calendarAccessGranted = granted
+        return granted
     }
 
     func requestReminderAccess() async -> Bool {
-        let currentStatus = EKEventStore.authorizationStatus(for: .reminder)
-        Log.calendar.info("Reminder auth status: \(String(describing: currentStatus))")
+        let granted = await requestAccess(for: .reminder) { try await self.store.requestFullAccessToReminders() }
+        reminderAccessGranted = granted
+        return granted
+    }
 
-        if currentStatus == .fullAccess {
-            reminderAccessGranted = true
-            Log.calendar.debug("Reminder access already granted")
+    private func requestAccess(for type: EKEntityType, requestBlock: @escaping () async throws -> Bool) async -> Bool {
+        let label = type == .event ? "Calendar" : "Reminder"
+        let status = EKEventStore.authorizationStatus(for: type)
+        Log.calendar.info("\(label) auth status: \(String(describing: status))")
+
+        if status == .fullAccess {
+            Log.calendar.debug("\(label) access already granted")
             return true
         }
-
-        if currentStatus == .denied {
-            reminderAccessGranted = false
-            Log.calendar.warning("Reminder access denied — user must enable in System Settings")
+        if status == .denied {
+            Log.calendar.warning("\(label) access denied — user must enable in System Settings")
             return false
         }
 
         do {
-            let granted = try await store.requestFullAccessToReminders()
-            reminderAccessGranted = granted
-            Log.calendar.info("Reminder access request result: \(granted)")
+            let granted = try await requestBlock()
+            Log.calendar.info("\(label) access request result: \(granted)")
             return granted
         } catch {
-            Log.calendar.error("Reminder access request failed: \(error.localizedDescription)")
-            reminderAccessGranted = false
+            Log.calendar.error("\(label) access request failed: \(error.localizedDescription)")
             return false
         }
     }

@@ -55,6 +55,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func showSettings() {
         Log.app.debug("Opening settings window")
+        openSettingsWindow(tab: "general")
+    }
+
+    func showAbout() {
+        openSettingsWindow(tab: "about")
+    }
+
+    private func openSettingsWindow(tab: String) {
+        SettingsNavigation.shared.selectedTab = tab
         if let w = settingsWindow, w.isVisible {
             bringWindowToFront(w)
             return
@@ -77,7 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showOnboarding() {
         let view = OnboardingView {
             SettingsManager.shared.hasCompletedOnboarding = true
-            TestModeManager.shared.clearState()
+            TestModeManager.shared.isEnabled = false
             Task { @MainActor in
                 self.onboardingWindow?.close()
                 self.onboardingWindow = nil
@@ -103,8 +112,7 @@ extension AppDelegate: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         let w = notification.object as? NSWindow
         guard w === settingsWindow || w === onboardingWindow else { return }
-        
-        // Switch back to accessory only when no other managed windows remain visible
+
         Task { @MainActor in
             let hasVisibleWindows = NSApp.windows.contains { window in
                 window.isVisible &&
@@ -122,7 +130,6 @@ extension AppDelegate: NSWindowDelegate {
 
 private extension AppDelegate {
     func bringWindowToFront(_ window: NSWindow) {
-        // Activation policy must be set before makeKeyAndOrderFront to ensure the window appears in front
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)

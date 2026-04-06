@@ -25,14 +25,14 @@ class BugReportManager: ObservableObject {
 
     /// Collects logs off main thread and saves them to a temp file.
     /// Does NOT open anything — the sheet handles that via action buttons.
-    func createBugReport() async {
+    func createBugReport(from startDate: Date, to endDate: Date) async {
         isGenerating = true
         logFileURL = nil
         githubIssueURL = nil
         lastError = nil
 
         do {
-            let report = try await generateReport()
+            let report = try await generateReport(from: startDate, to: endDate)
 
             let fileURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent("CalenBar-logs.txt")
@@ -66,10 +66,10 @@ class BugReportManager: ObservableObject {
 
     // MARK: - Report Generation
 
-    private func generateReport() async throws -> BugReport {
+    private func generateReport(from startDate: Date, to endDate: Date) async throws -> BugReport {
         let systemInfo = collectSystemInfo()
         let appInfo = collectAppInfo()
-        let logs = try await collectRecentLogs()
+        let logs = try await collectRecentLogs(from: startDate, to: endDate)
         return BugReport(systemInfo: systemInfo, appInfo: appInfo, logs: logs)
     }
 
@@ -102,15 +102,17 @@ class BugReportManager: ObservableObject {
     }
 
     /// Runs on a background thread to avoid blocking the main thread.
-    private func collectRecentLogs() async throws -> String {
-        try await Task.detached(priority: .userInitiated) {
+    private func collectRecentLogs(from startDate: Date, to endDate: Date) async throws -> String {
+        let start = startDate
+        let end = endDate
+        return try await Task.detached(priority: .userInitiated) {
             let store = try OSLogStore(scope: .currentProcessIdentifier)
-            let position = store.position(date: Date().addingTimeInterval(-5 * 60))
+            let position = store.position(date: start)
             let formatter = ISO8601DateFormatter()
 
             let lines = try store.getEntries(at: position)
                 .compactMap { $0 as? OSLogEntryLog }
-                .filter { [.notice, .error, .fault].contains($0.level) }
+                .filter { [.notice, .error, .fault].contains($0.level) && $0.date <= end }
                 .map { entry -> String in
                     let level: String
                     switch entry.level {

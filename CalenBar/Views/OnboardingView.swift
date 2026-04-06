@@ -278,8 +278,7 @@ private struct AlertStyleStep: View {
                         Text(Str.flashSpeed).foregroundColor(.secondary)
                         Slider(value: $settings.flashInterval, in: 0.15...1.0, step: 0.05)
                             .frame(width: 160)
-                        Text(settings.flashInterval < 0.25 ? Str.flashSpeedFast
-                             : settings.flashInterval < 0.55 ? Str.flashSpeedMedium : Str.flashSpeedSlow)
+                        Text(Str.flashSpeedLabel(settings.flashInterval))
                             .foregroundColor(.secondary).frame(width: 65, alignment: .leading)
                     }
 

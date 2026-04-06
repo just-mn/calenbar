@@ -144,11 +144,9 @@ class ReminderStatusController {
 
         if reminders.count == 1 {
             let name = reminders[0].title ?? Str.defaultReminderTitle
-            model.text     = String(name.prefix(20)) + (name.count > 20 ? "…" : "")
-            model.iconName = "bell.badge.fill"
+            model.text = String(name.prefix(20)) + (name.count > 20 ? "…" : "")
         } else {
-            model.text     = Str.reminderCount(reminders.count)
-            model.iconName = "bell.badge.fill"
+            model.text = Str.reminderCount(reminders.count)
         }
 
         DispatchQueue.main.async { [weak self] in

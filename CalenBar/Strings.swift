@@ -23,6 +23,8 @@ enum Str {
 
     static let settingsMenuItem = pick(en: "Settings…",      ru: "Настройки…",      zh: "设置…")
     static let quit             = pick(en: "Quit",           ru: "Выйти",           zh: "退出")
+    static let aboutCalenBar    = pick(en: "About CalenBar", ru: "О CalenBar",      zh: "关于 CalenBar")
+
 
     // MARK: - Event menu
 
@@ -114,6 +116,10 @@ enum Str {
     static let flashSpeedFast     = pick(en: "Fast",                       ru: "Быстро",                          zh: "快")
     static let flashSpeedMedium   = pick(en: "Medium",                     ru: "Средне",                          zh: "中")
     static let flashSpeedSlow     = pick(en: "Slow",                       ru: "Медленно",                        zh: "慢")
+
+    static func flashSpeedLabel(_ interval: Double) -> String {
+        interval < 0.25 ? flashSpeedFast : interval < 0.55 ? flashSpeedMedium : flashSpeedSlow
+    }
     static let soundEnabled       = pick(en: "Sound notification",         ru: "Звуковое уведомление",            zh: "声音通知")
     static let soundLabel         = pick(en: "Sound:",                     ru: "Звук:",                           zh: "声音：")
     static let soundTest          = pick(en: "▶ Test",                     ru: "▶ Тест",                          zh: "▶ 测试")
@@ -324,9 +330,6 @@ enum Str {
     static let bugReportDesc    = pick(en: "Collects system info and error logs (no sensitive data). A log file will open — drag it into the GitHub issue.",
                                        ru: "Соберёт информацию о системе и логи ошибок (без чувствительных данных). Откроется файл с логами — перетащите его в issue на GitHub.",
                                        zh: "收集系统信息和错误日志（无敏感数据）。日志文件将打开 — 将其拖入 GitHub issue。")
-    static let logFileOpened    = pick(en: "Log file opened — attach it to the issue",
-                                       ru: "Файл с логами открыт — прикрепите его к issue",
-                                       zh: "日志文件已打开 — 将其附加到 issue")
     static let bugReportReady   = pick(en: "Report Ready",
                                        ru: "Репорт готов",
                                        zh: "报告已就绪")
@@ -341,14 +344,19 @@ enum Str {
     static let openGitHubIssue  = pick(en: "Open GitHub Issue →",
                                        ru: "Открыть GitHub Issue →",
                                        zh: "打开 GitHub Issue →")
+    static let logsFrom         = pick(en: "Logs from:",         ru: "Логи с:",             zh: "日志从：")
+    static let logsTo           = pick(en: "Logs to:",           ru: "Логи до:",            zh: "日志到：")
     static let generating       = pick(en: "Generating…",       ru: "Создание…",          zh: "生成中…")
-    static let bugReportSuccess = pick(en: "Bug report generated. Opening GitHub…",
-                                       ru: "Баг-репорт создан. Открываю GitHub…",
-                                       zh: "错误报告已生成。正在打开 GitHub…")
     static let bugReportError   = pick(en: "Error generating report",
                                        ru: "Ошибка при создании репорта",
                                        zh: "生成报告时出错")
     static let close            = pick(en: "Close",             ru: "Закрыть",            zh: "关闭")
     static let cancel           = pick(en: "Cancel",            ru: "Отмена",             zh: "取消")
     static let generate         = pick(en: "Generate Report",   ru: "Создать репорт",     zh: "生成报告")
+
+    // MARK: - Custom sound
+
+    static let customSound    = pick(en: "Custom sound",       ru: "Свой звук",              zh: "自定义声音")
+    static let chooseFile     = pick(en: "Choose…",            ru: "Выбрать…",               zh: "选择…")
+    static let noFileSelected = pick(en: "No file selected",   ru: "Файл не выбран",         zh: "未选择文件")
 }

@@ -2,6 +2,8 @@ import Combine
 import Foundation
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
+import os
 
 enum DisplayMode: String, CaseIterable {
     case automatic   = "automatic"
@@ -13,6 +15,14 @@ enum DisplayMode: String, CaseIterable {
         case .automatic:   return Str.modeAutomatic
         case .informative: return Str.modeInformative
         case .compact:     return Str.modeCompact
+        }
+    }
+
+    var note: String {
+        switch self {
+        case .automatic:   return Str.displayAutoNote
+        case .informative: return Str.displayInfoNote
+        case .compact:     return Str.displayCompactNote
         }
     }
 }
@@ -55,6 +65,8 @@ class SettingsManager: ObservableObject {
         static let snoozeDurations           = "snoozeDurations"
         static let showEventsWithoutAlarms   = "showEventsWithoutAlarms"
         static let hasCompletedOnboarding    = "hasCompletedOnboarding"
+        static let useCustomSound            = "useCustomSound"
+        static let customSoundName           = "customSoundName"
     }
 
     // MARK: - Published
@@ -116,6 +128,12 @@ class SettingsManager: ObservableObject {
     @Published var hasCompletedOnboarding: Bool {
         didSet { defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding) }
     }
+    @Published var useCustomSound: Bool {
+        didSet { defaults.set(useCustomSound, forKey: Key.useCustomSound) }
+    }
+    @Published var customSoundName: String {
+        didSet { defaults.set(customSoundName, forKey: Key.customSoundName) }
+    }
 
     // MARK: - Init
 
@@ -148,6 +166,8 @@ class SettingsManager: ObservableObject {
         snoozeDurations = defaults.array(forKey: Key.snoozeDurations)  as? [Int]  ?? [5, 15, 30, 60]
         showEventsWithoutAlarms = defaults.object(forKey: Key.showEventsWithoutAlarms) as? Bool ?? false
         hasCompletedOnboarding  = defaults.bool(forKey: Key.hasCompletedOnboarding)
+        useCustomSound  = defaults.bool(forKey: Key.useCustomSound)
+        customSoundName = defaults.string(forKey: Key.customSoundName) ?? ""
     }
 
     // MARK: - Computed color profiles
@@ -174,7 +194,54 @@ class SettingsManager: ObservableObject {
 
     func playCurrentSound() {
         guard soundEnabled else { return }
-        NSSound(named: NSSound.Name(soundName))?.play()
+        if useCustomSound, let url = customSoundURL() {
+            NSSound(contentsOf: url, byReference: false)?.play()
+        } else {
+            NSSound(named: NSSound.Name(soundName))?.play()
+        }
+    }
+
+    func setCustomSound(url: URL) {
+        let dir = customSoundDirectory
+        // Remove previous custom sound
+        if let old = customSoundURL() { try? FileManager.default.removeItem(at: old) }
+        let dest = dir.appendingPathComponent("custom-sound.\(url.pathExtension)")
+        do {
+            try FileManager.default.copyItem(at: url, to: dest)
+            customSoundName = url.deletingPathExtension().lastPathComponent
+            useCustomSound = true
+            Log.settings.info("Custom sound set: \(self.customSoundName)")
+        } catch {
+            Log.settings.error("Failed to copy custom sound: \(error.localizedDescription)")
+        }
+    }
+
+    func clearCustomSound() {
+        if let url = customSoundURL() { try? FileManager.default.removeItem(at: url) }
+        customSoundName = ""
+        useCustomSound = false
+    }
+
+    func customSoundURL() -> URL? {
+        let dir = customSoundDirectory
+        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        return files.first { $0.lastPathComponent.hasPrefix("custom-sound") }
+    }
+
+    private var customSoundDirectory: URL {
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("CalenBar")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    func pickCustomSound() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.audio]
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        setCustomSound(url: url)
     }
 
     // MARK: - Flash duration options

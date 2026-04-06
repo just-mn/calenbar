@@ -35,11 +35,8 @@ class BaseStatusItem {
     private func observeAlertState() {
         AlertStateManager.shared.$activeEventAlerts
             .combineLatest(AlertStateManager.shared.$activeReminders)
-            .combineLatest(AlertStateManager.shared.$currentEvents)
             .receive(on: RunLoop.main)
-            .sink { [weak self] combined, current in
-                let (alerts, reminders) = combined
-                // Hide the base icon while event or reminder status items are visible
+            .sink { [weak self] alerts, reminders in
                 self?.statusItem.isVisible = alerts.isEmpty && reminders.isEmpty
             }
             .store(in: &cancellables)
