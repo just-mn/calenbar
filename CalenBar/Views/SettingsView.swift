@@ -489,13 +489,21 @@ private struct AboutTab: View {
                         .cornerRadius(16)
                 }
                 
-                Text("CalendarBar")
+                Text("CalenBar")
                     .font(.title)
                     .fontWeight(.semibold)
-                
+
                 Text("v\(version) (\(build))")
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                Button(action: openWebsite) {
+                    Text("by just-mn")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .underline()
             }
             
             // Description
@@ -515,6 +523,12 @@ private struct AboutTab: View {
                 }
                 .controlSize(.large)
                 
+                Button(action: openWebsite) {
+                    Label(Str.visitWebsite, systemImage: "globe")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+
                 Button(action: openGitHub) {
                     Label(Str.viewOnGitHub, systemImage: "link")
                         .frame(maxWidth: .infinity)
@@ -530,6 +544,12 @@ private struct AboutTab: View {
         }
     }
     
+    private func openWebsite() {
+        if let url = URL(string: "https://just-mn.dev") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     private func openGitHub() {
         if let url = URL(string: "https://github.com/just-mn/calenbar") {
             NSWorkspace.shared.open(url)
@@ -542,77 +562,108 @@ private struct AboutTab: View {
 private struct BugReportSheet: View {
     @Binding var isPresented: Bool
     @ObservedObject private var manager = BugReportManager.shared
-    
+
     var body: some View {
+        VStack(spacing: 0) {
+            if manager.logFileURL != nil {
+                successView
+            } else {
+                prepareView
+            }
+        }
+        .frame(width: 450, height: 300)
+        .onDisappear { manager.reset() }
+    }
+
+    // MARK: Initial / generating state
+
+    private var prepareView: some View {
         VStack(spacing: 20) {
-            // Header
             HStack {
-                Image(systemName: "ladybug.fill")
-                    .font(.title)
-                    .foregroundColor(.red)
-                Text(Str.bugReportTitle)
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                Image(systemName: "ladybug.fill").font(.title).foregroundColor(.red)
+                Text(Str.bugReportTitle).font(.title2).fontWeight(.semibold)
             }
             .padding(.top, 20)
-            
-            // Description
+
             Text(Str.bugReportDesc)
-                .font(.body)
-                .foregroundColor(.secondary)
+                .font(.body).foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            
+
             Spacer()
-            
-            // Status / Error
+
             if manager.isGenerating {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text(Str.generating)
-                        .foregroundColor(.secondary)
+                VStack(spacing: 10) {
+                    ProgressView().scaleEffect(1.2)
+                    Text(Str.generating).foregroundColor(.secondary)
                 }
-                .padding(.vertical, 40)
             } else if let error = manager.lastError {
                 VStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.largeTitle)
-                        .foregroundColor(.orange)
-                    Text(Str.bugReportError)
-                        .font(.headline)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.largeTitle).foregroundColor(.orange)
+                    Text(Str.bugReportError).font(.headline)
+                    Text(error).font(.caption).foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                .padding(.vertical, 20)
             }
-            
+
             Spacer()
-            
-            // Buttons
+
             HStack(spacing: 12) {
-                Button(Str.cancel) {
-                    isPresented = false
-                }
-                .keyboardShortcut(.cancelAction)
-                .disabled(manager.isGenerating)
-                
+                Button(Str.cancel) { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(manager.isGenerating)
+
                 Button(Str.generate) {
-                    Task {
-                        await manager.createBugReport()
-                        // Close sheet after opening browser
-                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-                        isPresented = false
-                    }
+                    Task { await manager.createBugReport() }
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(manager.isGenerating)
             }
             .padding(.bottom, 20)
         }
-        .frame(width: 450, height: 350)
+    }
+
+    // MARK: Success state
+
+    private var successView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 48)).foregroundColor(.green)
+                .padding(.top, 24)
+
+            Text(Str.bugReportReady).font(.title3).fontWeight(.semibold)
+
+            Text(Str.bugReportReadyDesc)
+                .font(.body).foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+
+            Spacer()
+
+            VStack(spacing: 8) {
+                Button(action: { manager.revealLogFile() }) {
+                    Label(Str.revealLogFile, systemImage: "folder")
+                        .frame(maxWidth: .infinity)
+                }
+                .controlSize(.large)
+
+                Button(action: {
+                    manager.openGitHubIssue()
+                    isPresented = false
+                }) {
+                    Label(Str.openGitHubIssue, systemImage: "arrow.up.right.square")
+                        .frame(maxWidth: .infinity)
+                }
+                .keyboardShortcut(.defaultAction)
+                .controlSize(.large)
+            }
+            .padding(.horizontal, 40)
+
+            Button(Str.close) { isPresented = false }
+                .buttonStyle(.plain).foregroundColor(.secondary)
+                .padding(.bottom, 20)
+        }
     }
 }
 

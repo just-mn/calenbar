@@ -104,7 +104,7 @@ enum Str {
     static let tabCalendars   = pick(en: "Calendars",   ru: "Календари",     zh: "日历")
     static let tabReminders   = pick(en: "Reminders",   ru: "Напоминания",   zh: "提醒事项")
     static let tabSnooze      = pick(en: "Snooze",      ru: "Откладывание",  zh: "稍后提醒")
-    static let settingsTitle  = pick(en: "CalendarBar Settings", ru: "Настройки CalendarBar", zh: "CalendarBar 设置")
+    static let settingsTitle  = pick(en: "CalenBar Settings", ru: "Настройки CalenBar", zh: "CalenBar 设置")
 
     // MARK: - Settings — General
 
@@ -193,13 +193,13 @@ enum Str {
     static let accessGranted      = pick(en: "Access granted",               ru: "Доступ разрешён",                     zh: "已授权")
     static let allowAccess        = pick(en: "Allow Access",                 ru: "Разрешить доступ",                    zh: "允许访问")
     static let calendarPermTitle  = pick(en: "Calendar Access",              ru: "Доступ к Календарю",                  zh: "访问日历")
-    static let calendarPermDesc   = pick(en: "CalendarBar needs access to Calendar to track your events and their reminders.",
-                                         ru: "CalendarBar нужен доступ к Календарю, чтобы видеть ваши события и их напоминания.",
-                                         zh: "CalendarBar 需要访问日历以跟踪您的事件和提醒。")
+    static let calendarPermDesc   = pick(en: "CalenBar needs access to Calendar to track your events and their reminders.",
+                                         ru: "CalenBar нужен доступ к Календарю, чтобы видеть ваши события и их напоминания.",
+                                         zh: "CalenBar 需要访问日历以跟踪您的事件和提醒。")
     static let reminderPermTitle  = pick(en: "Reminders Access",             ru: "Доступ к Напоминаниям",               zh: "访问提醒事项")
-    static let reminderPermDesc   = pick(en: "CalendarBar needs access to Reminders to display your tasks in the menu bar.",
-                                         ru: "CalendarBar нужен доступ к Напоминаниям, чтобы показывать задачи прямо в строке меню.",
-                                         zh: "CalendarBar 需要访问提醒事项以在菜单栏中显示您的任务。")
+    static let reminderPermDesc   = pick(en: "CalenBar needs access to Reminders to display your tasks in the menu bar.",
+                                         ru: "CalenBar нужен доступ к Напоминаниям, чтобы показывать задачи прямо в строке меню.",
+                                         zh: "CalenBar 需要访问提醒事项以在菜单栏中显示您的任务。")
     static let pickCalendarsTitle = pick(en: "Select Calendars",             ru: "Выберите календари",                  zh: "选择日历")
     static let pickCalendarsHint  = pick(en: "Leave all unchecked to track every calendar.",
                                          ru: "Если ничего не выбрать — будут отслеживаться все.",
@@ -284,9 +284,9 @@ enum Str {
                                         zh: "未授予提醒访问权限，跳过此演示。")
 
     static let allDoneTitle      = pick(en: "You're All Set!",           ru: "Всё готово!",                    zh: "一切就绪！")
-    static let allDoneDesc       = pick(en: "CalendarBar will keep your events and reminders visible right in the menu bar.",
-                                        ru: "CalendarBar будет показывать события и напоминания прямо в строке меню.",
-                                        zh: "CalendarBar 将在菜单栏中持续显示您的事件和提醒。")
+    static let allDoneDesc       = pick(en: "CalenBar will keep your events and reminders visible right in the menu bar.",
+                                        ru: "CalenBar будет показывать события и напоминания прямо в строке меню.",
+                                        zh: "CalenBar 将在菜单栏中持续显示您的事件和提醒。")
 
     // MARK: - Flash duration options
 
@@ -314,15 +314,33 @@ enum Str {
     // MARK: - Bug Report / About
 
     static let tabAbout         = pick(en: "About",             ru: "О программе",        zh: "关于")
-    static let aboutDescription = pick(en: "CalendarBar keeps your Calendar events and Reminders always visible in the macOS menu bar.",
-                                       ru: "CalendarBar держит события из Календаря и Напоминания всегда на виду в строке меню macOS.",
-                                       zh: "CalendarBar 在 macOS 菜单栏中持续显示您的日历事件和提醒。")
+    static let aboutDescription = pick(en: "CalenBar keeps your Calendar events and Reminders always visible in the macOS menu bar.",
+                                       ru: "CalenBar держит события из Календаря и Напоминания всегда на виду в строке меню macOS.",
+                                       zh: "CalenBar 在 macOS 菜单栏中持续显示您的日历事件和提醒。")
     static let reportBug        = pick(en: "Report a Bug",      ru: "Сообщить об ошибке", zh: "报告错误")
+    static let visitWebsite      = pick(en: "Visit just-mn.dev", ru: "Сайт just-mn.dev",   zh: "访问 just-mn.dev")
     static let viewOnGitHub     = pick(en: "View on GitHub",    ru: "Открыть на GitHub",  zh: "在 GitHub 上查看")
     static let bugReportTitle   = pick(en: "Report a Bug",      ru: "Отправить баг-репорт", zh: "报告错误")
-    static let bugReportDesc    = pick(en: "This will collect system information and recent logs (without sensitive data like event titles) and open GitHub to create an issue.",
-                                       ru: "Будет собрана информация о системе и последние логи (без чувствительных данных вроде названий событий), затем откроется GitHub для создания issue.",
-                                       zh: "这将收集系统信息和最近的日志（不包含事件标题等敏感数据），并打开 GitHub 创建问题报告。")
+    static let bugReportDesc    = pick(en: "Collects system info and error logs (no sensitive data). A log file will open — drag it into the GitHub issue.",
+                                       ru: "Соберёт информацию о системе и логи ошибок (без чувствительных данных). Откроется файл с логами — перетащите его в issue на GitHub.",
+                                       zh: "收集系统信息和错误日志（无敏感数据）。日志文件将打开 — 将其拖入 GitHub issue。")
+    static let logFileOpened    = pick(en: "Log file opened — attach it to the issue",
+                                       ru: "Файл с логами открыт — прикрепите его к issue",
+                                       zh: "日志文件已打开 — 将其附加到 issue")
+    static let bugReportReady   = pick(en: "Report Ready",
+                                       ru: "Репорт готов",
+                                       zh: "报告已就绪")
+    static let bugReportReadyDesc = pick(
+        en: "A log file has been prepared. Reveal it in Finder, then open the GitHub issue and drag the file into the text field.",
+        ru: "Файл с логами готов. Откройте его в Finder, затем создайте issue на GitHub и перетащите файл в поле описания.",
+        zh: "日志文件已准备好。在 Finder 中显示它，然后打开 GitHub issue 并将文件拖入文本框。"
+    )
+    static let revealLogFile    = pick(en: "Reveal Log File in Finder",
+                                       ru: "Показать файл в Finder",
+                                       zh: "在 Finder 中显示日志文件")
+    static let openGitHubIssue  = pick(en: "Open GitHub Issue →",
+                                       ru: "Открыть GitHub Issue →",
+                                       zh: "打开 GitHub Issue →")
     static let generating       = pick(en: "Generating…",       ru: "Создание…",          zh: "生成中…")
     static let bugReportSuccess = pick(en: "Bug report generated. Opening GitHub…",
                                        ru: "Баг-репорт создан. Открываю GitHub…",

@@ -1,6 +1,6 @@
 import os
 
-/// Unified logging for CalendarBar.
+/// Unified logging for CalenBar.
 ///
 /// Uses Apple's `os.Logger` — logs are captured by Console.app, `log stream`,
 /// and on-device diagnostics (sysdiagnose). Privacy-safe for App Store.

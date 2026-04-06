@@ -1,78 +1,93 @@
 import Foundation
 import AppKit
-import EventKit
 import Combine
 import os
+import OSLog
 
 /// Manages bug report generation: collects logs, system info, and creates GitHub issue URL.
+/// Logs are copied to clipboard — not embedded in the URL — to avoid length limits.
 /// Privacy-safe: excludes calendar/reminder titles and other sensitive data.
 @MainActor
 class BugReportManager: ObservableObject {
     static let shared = BugReportManager()
-    
+
     @Published var isGenerating = false
     @Published var lastError: String?
-    
+    @Published var logFileURL: URL?
+    @Published var githubIssueURL: URL?
+
     private let githubUser = "just-mn"
     private let githubRepo = "calenbar"
-    
+
     private init() {}
-    
+
     // MARK: - Public API
-    
-    /// Generates a bug report and opens GitHub issue creation page in browser.
+
+    /// Collects logs off main thread and saves them to a temp file.
+    /// Does NOT open anything — the sheet handles that via action buttons.
     func createBugReport() async {
         isGenerating = true
+        logFileURL = nil
+        githubIssueURL = nil
         lastError = nil
-        
+
         do {
             let report = try await generateReport()
-            let url = createGitHubIssueURL(report: report)
-            
-            await MainActor.run {
-                NSWorkspace.shared.open(url)
-                isGenerating = false
-            }
+
+            let fileURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("CalenBar-logs.txt")
+            try report.logs.write(to: fileURL, atomically: true, encoding: .utf8)
+
+            logFileURL = fileURL
+            githubIssueURL = createGitHubIssueURL(report: report)
+            isGenerating = false
         } catch {
             lastError = error.localizedDescription
             isGenerating = false
             Log.app.error("Failed to generate bug report: \(error.localizedDescription)")
         }
     }
-    
+
+    func revealLogFile() {
+        guard let url = logFileURL else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    func openGitHubIssue() {
+        guard let url = githubIssueURL else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func reset() {
+        logFileURL = nil
+        githubIssueURL = nil
+        lastError = nil
+    }
+
     // MARK: - Report Generation
-    
+
     private func generateReport() async throws -> BugReport {
         let systemInfo = collectSystemInfo()
         let appInfo = collectAppInfo()
         let logs = try await collectRecentLogs()
-        
-        return BugReport(
-            systemInfo: systemInfo,
-            appInfo: appInfo,
-            logs: logs
-        )
+        return BugReport(systemInfo: systemInfo, appInfo: appInfo, logs: logs)
     }
-    
+
     private func collectSystemInfo() -> SystemInfo {
-        let osVersion = ProcessInfo.processInfo.operatingSystemVersion
-        let osVersionString = "\(osVersion.majorVersion).\(osVersion.minorVersion).\(osVersion.patchVersion)"
-        
+        let v = ProcessInfo.processInfo.operatingSystemVersion
         return SystemInfo(
-            osVersion: osVersionString,
+            osVersion: "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)",
             architecture: ProcessInfo.processInfo.machineHardwareName ?? "unknown",
             locale: Locale.current.identifier,
             preferredLanguages: Locale.preferredLanguages.prefix(3).joined(separator: ", ")
         )
     }
-    
+
     private func collectAppInfo() -> AppInfo {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
-        
-        let settings = SettingsManager.shared
+        let build   = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let settings   = SettingsManager.shared
         let calendarMgr = CalendarManager.shared
-        
         return AppInfo(
             version: version,
             build: build,
@@ -85,123 +100,100 @@ class BugReportManager: ObservableObject {
             reminderAccessGranted: calendarMgr.reminderAccessGranted
         )
     }
-    
-    /// Collects recent logs from the unified logging system.
-    /// Privacy-safe: filters out event/reminder titles and other sensitive data.
+
+    /// Runs on a background thread to avoid blocking the main thread.
     private func collectRecentLogs() async throws -> String {
-        // Collect logs from the last 5 minutes
-        let fiveMinutesAgo = Date().addingTimeInterval(-5 * 60)
-        
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
-        process.arguments = [
-            "show",
-            "--predicate", "subsystem == 'dev.just-mn.calenbar'",
-            "--start", ISO8601DateFormatter().string(from: fiveMinutesAgo),
-            "--style", "syslog",
-            "--info",
-            "--debug"
-        ]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else {
-            return "Failed to decode logs"
-        }
-        
-        // Privacy filter: remove sensitive data
-        return sanitizeLogs(output)
+        try await Task.detached(priority: .userInitiated) {
+            let store = try OSLogStore(scope: .currentProcessIdentifier)
+            let position = store.position(date: Date().addingTimeInterval(-5 * 60))
+            let formatter = ISO8601DateFormatter()
+
+            let lines = try store.getEntries(at: position)
+                .compactMap { $0 as? OSLogEntryLog }
+                .filter { [.notice, .error, .fault].contains($0.level) }
+                .map { entry -> String in
+                    let level: String
+                    switch entry.level {
+                    case .debug:  level = "DEBUG"
+                    case .info:   level = "INFO"
+                    case .notice: level = "NOTICE"
+                    case .error:  level = "ERROR"
+                    case .fault:  level = "FAULT"
+                    default:      level = "LOG"
+                    }
+                    return "[\(formatter.string(from: entry.date))] [\(level)] \(entry.composedMessage)"
+                }
+
+            let output = lines.joined(separator: "\n")
+            return Self.sanitizeLogs(output.isEmpty ? "No recent logs found." : output)
+        }.value
     }
-    
-    /// Removes sensitive information from logs.
-    private func sanitizeLogs(_ logs: String) -> String {
-        var sanitized = logs
-        
-        // Remove any event/reminder titles that might appear in logs
-        // Pattern: title="..." or title: "..."
-        sanitized = sanitized.replacingOccurrences(
+
+    /// Pure string processing — nonisolated so it can run on any thread.
+    private nonisolated static func sanitizeLogs(_ logs: String) -> String {
+        var s = logs
+        s = s.replacingOccurrences(
             of: #"title[=:]\s*"[^"]*""#,
             with: "title=\"[REDACTED]\"",
             options: .regularExpression
         )
-        
-        // Remove calendar names
-        sanitized = sanitized.replacingOccurrences(
+        s = s.replacingOccurrences(
             of: #"calendar[=:]\s*"[^"]*""#,
             with: "calendar=\"[REDACTED]\"",
             options: .regularExpression
         )
-        
-        // Limit to last 1000 lines to avoid huge issue body
-        let lines = sanitized.split(separator: "\n")
-        if lines.count > 1000 {
-            let truncated = lines.suffix(1000)
-            sanitized = truncated.joined(separator: "\n")
-            sanitized = "... (truncated, showing last 1000 lines)\n\n" + sanitized
-        }
-        
-        return sanitized
+        return s
     }
-    
+
     // MARK: - GitHub Issue URL
-    
+
     private func createGitHubIssueURL(report: BugReport) -> URL {
-        let title = "Bug Report: "
-        let body = formatIssueBody(report: report)
-        
         var components = URLComponents()
         components.scheme = "https"
         components.host = "github.com"
         components.path = "/\(githubUser)/\(githubRepo)/issues/new"
         components.queryItems = [
-            URLQueryItem(name: "title", value: title),
-            URLQueryItem(name: "body", value: body),
+            URLQueryItem(name: "title", value: "Bug Report: "),
+            URLQueryItem(name: "body",  value: formatIssueBody(report: report)),
             URLQueryItem(name: "labels", value: "bug")
         ]
-        
         return components.url ?? URL(string: "https://github.com/\(githubUser)/\(githubRepo)/issues/new")!
     }
-    
+
     private func formatIssueBody(report: BugReport) -> String {
-        return """
+        """
         ## Description
         <!-- Please describe the bug you encountered -->
-        
-        
-        
+
+
+
         ## Steps to Reproduce
         <!-- How can we reproduce this issue? -->
-        1. 
-        2. 
-        3. 
-        
+        1.
+        2.
+        3.
+
         ## Expected Behavior
         <!-- What did you expect to happen? -->
-        
-        
-        
+
+
+
         ## Actual Behavior
         <!-- What actually happened? -->
-        
-        
-        
+
+
+
         ---
-        
+
         ## System Information
-        
+
         - **macOS Version:** \(report.systemInfo.osVersion)
         - **Architecture:** \(report.systemInfo.architecture)
         - **Locale:** \(report.systemInfo.locale)
         - **Languages:** \(report.systemInfo.preferredLanguages)
-        
+
         ## App Information
-        
+
         - **Version:** \(report.appInfo.version) (build \(report.appInfo.build))
         - **Flash Enabled:** \(report.appInfo.flashEnabled)
         - **Sound Enabled:** \(report.appInfo.soundEnabled)
@@ -210,14 +202,12 @@ class BugReportManager: ObservableObject {
         - **Tracked Reminder Lists:** \(report.appInfo.trackedReminderListsCount)
         - **Calendar Access:** \(report.appInfo.calendarAccessGranted)
         - **Reminder Access:** \(report.appInfo.reminderAccessGranted)
-        
+
         <details>
-        <summary>Recent Logs (last 5 minutes)</summary>
-        
-        ```
-        \(report.logs)
-        ```
-        
+        <summary>Recent Logs</summary>
+
+        <!-- A log file was opened on your Mac — drag and drop it here -->
+
         </details>
         """
     }
@@ -255,11 +245,9 @@ struct AppInfo {
 private extension ProcessInfo {
     var machineHardwareName: String? {
         var sysinfo = utsname()
-        let result = uname(&sysinfo)
-        guard result == EXIT_SUCCESS else { return nil }
-        
+        guard uname(&sysinfo) == EXIT_SUCCESS else { return nil }
         let data = Data(bytes: &sysinfo.machine, count: Int(_SYS_NAMELEN))
-        guard let identifier = String(bytes: data, encoding: .ascii) else { return nil }
-        return identifier.trimmingCharacters(in: .controlCharacters)
+        return String(bytes: data, encoding: .ascii)?
+            .trimmingCharacters(in: .controlCharacters)
     }
 }

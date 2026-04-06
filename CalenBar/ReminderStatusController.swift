@@ -127,8 +127,12 @@ class ReminderStatusController {
         Log.reminderUI.debug("Hiding reminder status item")
         flash.stop()
         model.flashOn = false
-        statusItem?.isVisible = false
         knownReminderIDs.removeAll()
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+        }
+        statusItem = nil
+        containerView = nil
     }
 
     // MARK: - Display

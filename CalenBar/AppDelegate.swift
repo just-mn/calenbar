@@ -63,7 +63,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
         window.title = Str.settingsTitle
-        window.setContentSize(NSSize(width: 480, height: 520))
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.center()
         window.isReleasedWhenClosed = false
@@ -88,7 +87,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: view)
         let window = NSWindow(contentViewController: hosting)
         window.title = Str.welcomeTitle
-        window.setContentSize(NSSize(width: 520, height: 460))
         window.styleMask = [.titled, .closable]
         window.center()
         window.isReleasedWhenClosed = false

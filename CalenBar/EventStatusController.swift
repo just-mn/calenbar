@@ -13,6 +13,7 @@ class EventMenuBarModel: ObservableObject {
     @Published var iconName   = "calendar.badge.exclamationmark"
     @Published var isCompact  = false
     @Published var flashOn    = false
+    @Published var shouldFlash = true   // false for in-progress events
     @Published var flashTextColor: Color = .orange
     @Published var flashBgColor:   Color = .orange
     /// Incremented on each event cycle — triggers the cross-fade transition animation.
@@ -43,12 +44,12 @@ struct EventMenuBarView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: model.cycleKey)
-        .foregroundStyle(model.flashOn ? model.flashTextColor : Color(nsColor: .labelColor))
+        .foregroundStyle(model.flashOn && model.shouldFlash ? model.flashTextColor : Color(nsColor: .labelColor))
         .padding(.horizontal, 6)
         .frame(height: NSStatusBar.system.thickness)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(model.flashOn ? model.flashBgColor.opacity(0.15) : Color.clear)
+                .fill(model.flashOn && model.shouldFlash ? model.flashBgColor.opacity(0.15) : Color.clear)
         )
         .animation(.easeInOut(duration: 0.1), value: model.flashOn)
         .fixedSize()
@@ -98,8 +99,10 @@ class EventStatusController {
 
         alertState.$activeEventAlerts
             .combineLatest(alertState.$activeReminders)
+            .combineLatest(alertState.$currentEvents)
             .receive(on: RunLoop.main)
-            .sink { [weak self] alerts, _ in
+            .sink { [weak self] combined, _ in
+                let (alerts, _) = combined
                 self?.handleStateChange(alerts: alerts)
             }
             .store(in: &cancellables)
@@ -108,9 +111,10 @@ class EventStatusController {
     // MARK: - State
 
     private func handleStateChange(alerts: [EKEvent]) {
-        if alerts.isEmpty { hide(); return }
+        let all = merged(alerts: alerts, current: alertState.currentEvents)
+        if all.isEmpty { hide(); return }
 
-        Log.eventUI.debug("State change — \(alerts.count) event alerts")
+        Log.eventUI.debug("State change — \(alerts.count) alert(s), \(alertState.currentEvents.count) in-progress")
         ensureStatusItem()
 
         let incomingIDs = Set(alerts.map { eventID($0) })
@@ -118,7 +122,7 @@ class EventStatusController {
         if !brandNew.isEmpty { knownAlertIDs.formUnion(brandNew) }
         knownAlertIDs = knownAlertIDs.intersection(incomingIDs)
 
-        setupCycleTimer(count: alerts.count)
+        setupCycleTimer(count: all.count)
         applyDisplay()
         containerView?.menuProvider = { [weak self] in
             guard let self else { return NSMenu() }
@@ -187,17 +191,22 @@ class EventStatusController {
         flash.stop()
         stopCycleTimer()
         model.flashOn = false
-        statusItem?.isVisible = false
         knownAlertIDs.removeAll()
+        if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+        }
+        statusItem = nil
+        containerView = nil
     }
 
     // MARK: - Display
 
     private func applyDisplay(animated: Bool = false) {
-        let all = deduplicated(alertState.activeEventAlerts)
+        let all = merged(alerts: alertState.activeEventAlerts, current: alertState.currentEvents)
         guard !all.isEmpty else { return }
 
-        let event = all[min(cycleIndex, all.count - 1)]
+        let safeIndex = min(cycleIndex, all.count - 1)
+        let event = all[safeIndex]
         let now   = Date()
         let name  = event.title ?? Str.defaultEventTitle
         let title = String(name.prefix(18)) + (name.count > 18 ? "…" : "")
@@ -205,11 +214,15 @@ class EventStatusController {
         model.isCompact = shouldBeCompact
 
         if let start = event.startDate, now < start {
-            model.targetDate = start
-            model.iconName   = "calendar.badge.exclamationmark"
+            // Upcoming: count down to start, flash allowed
+            model.targetDate  = start
+            model.iconName    = "calendar.badge.exclamationmark"
+            model.shouldFlash = true
         } else if let end = event.endDate {
-            model.targetDate = end
-            model.iconName   = "calendar.badge.clock"
+            // In-progress: count down to end, no flash
+            model.targetDate  = end
+            model.iconName    = "calendar.badge.clock"
+            model.shouldFlash = false
         }
 
         if animated && title != model.title {
@@ -320,6 +333,7 @@ class EventStatusController {
 
     private func setupCycleTimer(count: Int) {
         if count <= 1 { stopCycleTimer(); cycleIndex = 0; return }
+        cycleIndex = min(cycleIndex, count - 1)
         guard cycleTimer == nil else { return }
         cycleTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {

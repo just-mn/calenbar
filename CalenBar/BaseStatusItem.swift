@@ -11,7 +11,7 @@ class BaseStatusItem {
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
-            let img = NSImage(systemSymbolName: "calendar", accessibilityDescription: "CalendarBar")
+            let img = NSImage(systemSymbolName: "calendar", accessibilityDescription: "CalenBar")
             img?.isTemplate = true
             button.image = img
         }
@@ -40,7 +40,7 @@ class BaseStatusItem {
             .sink { [weak self] combined, current in
                 let (alerts, reminders) = combined
                 // Hide the base icon while event or reminder status items are visible
-                self?.statusItem.isVisible = alerts.isEmpty && reminders.isEmpty && current.isEmpty
+                self?.statusItem.isVisible = alerts.isEmpty && reminders.isEmpty
             }
             .store(in: &cancellables)
     }
